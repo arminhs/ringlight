@@ -45,11 +45,26 @@ Apple recently introduced "Edge Light" in macOS Tahoe (26.2), but the feature is
 
 ## Installation & Usage
 
+### Download
+
+1. Download `ringlight-<version>.zip` from the [latest release](../../releases/latest).
+2. Unzip it and move `ringlight.app` to your Applications folder.
+3. Open it. Release builds are not notarized by Apple, so macOS asks you to confirm the first time:
+   - **macOS 12 to 14**: Control-click `ringlight.app`, choose **Open**, then click **Open** in the dialog.
+   - **macOS 15 and later**: Open the app once and close the warning, then go to **System Settings › Privacy & Security** and click **Open Anyway**.
+
+After an update, macOS may ask for camera access again, because each release build has a new signature.
+
+### Build from Source
+
 1. **Clone the repository**: `git clone https://github.com/itsOmSarraf/ringlight.git`
 2. **Open in Xcode**: `ringlight.xcodeproj`
 3. **Build and Run**: Press `⌘R`.
-4. **Operation**: Click the rectangular icon in the menu bar to adjust brightness, thickness, temperature, and toggle **Avoid Mouse**.
-5. **Shortcuts**: 
+
+### Usage
+
+1. **Operation**: Click the rectangular icon in the menu bar to adjust brightness, thickness, temperature, and toggle **Avoid Mouse**.
+2. **Shortcuts**: 
    - `SPACE`: Toggle light ON/OFF.
    - `ESC`: Quit application.
 
