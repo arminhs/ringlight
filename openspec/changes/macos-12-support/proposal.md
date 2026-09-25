@@ -8,7 +8,7 @@ RingLight is pitched as Edge Light for Macs that can't run macOS Tahoe, but the 
 
 - Lower the app's minimum macOS version from 14.6 to 12.0 (Monterey). This is the lowest version possible: the ring's mouse-avoidance mask needs macOS 12 APIs, and current Xcode (27) cannot target anything older.
 - Fix what breaks on Monterey that the compiler can't catch. The Temperature control's `thermometer.medium` icon doesn't exist before macOS 13, so it would be blank on macOS 12; use `thermometer` there.
-- Keep the ring's middle transparent whatever fill rule applies. In the first test of the downloaded build it rendered as a filled rectangle, because the cut-out depended on the even-odd fill rule.
+- Keep the ring's middle transparent on macOS 12. On macOS 12.7 the ring rendered as a filled rectangle, because its middle was a hole in a single path, which SwiftUI there fills in. Each ring layer now erases its middle by compositing instead, the way the mouse-avoidance hole already works.
 - Add a GitHub Actions workflow that builds a universal (Apple silicon + Intel), ad-hoc-signed `ringlight.app`. It checks that the build declares macOS 12.0 as its minimum and contains both architectures. When a `vX.Y.Z` tag is pushed, it publishes the zipped app to GitHub Releases.
 - Run the same build, without publishing, on pull requests and pushes to `main`, so code that needs a newer macOS fails before a release is tagged.
 - Update the README with system requirements, download instructions, and how to open an app that isn't notarized the first time. Keep build-from-source instructions for Macs that can run Xcode 16 or later.

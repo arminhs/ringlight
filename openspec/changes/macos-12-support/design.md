@@ -106,16 +106,17 @@ Adding Developer ID later means these steps, all in the `build` job before packa
 3. Run `notarytool submit --wait`.
 4. Staple the notarization ticket.
 
-### 7. Make the ring's cut-out independent of the fill rule
+### 7. Cut the ring's middle out by compositing
 
-The ring's path is the outer rounded rect plus the inner one, both drawn in the same direction. It relied on the even-odd fill rule, applied through a `fill` wrapper on `RoundedRingShape`, to leave the middle empty. In the first test of the downloaded build, the ring rendered as a filled rectangle, so the even-odd rule was not in effect there.
+The ring used to be one path: the outer rounded rect plus the inner one as a hole, filled with the even-odd rule through a `fill` wrapper on `RoundedRingShape`. On macOS 12.7 the downloaded build drew a filled rectangle instead. Mirroring the inner rect so that it winds the opposite way should keep the hole under both fill rules, but the build with that change still drew a filled rectangle on macOS 12.7. So SwiftUI there doesn't draw this path as one shape with a hole, whatever the fill rule or direction.
 
-The inner rect is now mirrored onto itself with `CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 2 × midX, ty: 0)`. It covers the same area but winds the opposite way, so the middle stays empty under both the non-zero and the even-odd rule. The ring's geometry and look do not change.
+Each ring layer is now a `RingLayer` view: a `Canvas` that fills the outer rounded rect and then erases the inner one with the `destinationOut` blend mode. The mouse-avoidance mask already uses this technique, and it works on macOS 12.7, since the hole around the pointer shows correctly. The ring's geometry, colors and blur do not change. `RoundedRingShape` and its `fill` wrapper are removed.
 
 Alternatives considered:
 
-- **Find out why the even-odd rule was lost and fix only that.** The cause could be the overload the `fill` wrapper resolves to at the lower deployment target, or the older SwiftUI runtime. Either way, the shape would still break whenever the rule is lost. Rejected.
-- **Stroke a rounded rect instead of filling a path.** The inner corner radius would then follow from the stroke instead of the current `max(radius - 0.6 × thickness, 20)`, which changes the look. Rejected.
+- **Mirror the inner rect in the path.** Tried first. It still drew a filled rectangle on macOS 12.7.
+- **Stroke a rounded rect.** The inner corner radius would then follow from the stroke instead of the current `max(radius - 0.6 × thickness, 20)`, which changes the look. Rejected.
+- **Use `.blendMode(.destinationOut)` on SwiftUI shapes inside a `.compositingGroup()`.** This would probably work too, but the `Canvas` version is the exact mechanism already proven on macOS 12.7. Rejected.
 
 ### Private API
 
