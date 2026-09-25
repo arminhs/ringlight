@@ -35,6 +35,14 @@ Apple recently introduced "Edge Light" in macOS Tahoe (26.2), but the feature is
 
 ---
 
+## Requirements
+
+- macOS 12 Monterey or later
+- An Apple silicon or Intel Mac
+- To build from source: Xcode 16 or later, which runs on macOS 14.5 or later. The app you build still runs on macOS 12.
+
+---
+
 ## Installation & Usage
 
 1. **Clone the repository**: `git clone https://github.com/itsOmSarraf/ringlight.git`

@@ -325,11 +325,19 @@ struct ControlSlider: View {
 
 struct TemperatureSlider: View {
     @Binding var value: CGFloat
-    
+
+    // "thermometer.medium" was added in macOS 13; macOS 12 has the same glyph named "thermometer"
+    private var thermometerSymbol: String {
+        if #available(macOS 13, *) {
+            return "thermometer.medium"
+        }
+        return "thermometer"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "thermometer.medium")
+                Image(systemName: thermometerSymbol)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .frame(width: 18)
