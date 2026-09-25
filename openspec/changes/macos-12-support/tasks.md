@@ -6,6 +6,7 @@
 - [x] 1.2 Fix any availability errors the build reports without raising the target, for example by selecting the macOS 10.15 `Font.system(size:weight:design:)` overload (design Decision 3); verify that `xcodebuild -project ringlight.xcodeproj -target ringlight -configuration Release build` succeeds with no availability errors or warnings
 - [ ] 1.3 In `TemperatureSlider`, show `thermometer.medium` on macOS 13 and later and `thermometer` on macOS 12, using `if #available(macOS 13, *)` (design Decision 2); verify that the Temperature icon still shows in the control panel on the current macOS
 - [x] 1.4 Add a Requirements section to `README.md` (macOS 12 Monterey or later, Apple silicon or Intel; building from source needs Xcode 16 or later, which runs on macOS 14.5 or later), and change the deployment target in the `openspec/config.yaml` context to 12.0 (unit tests 14.6); verify that `openspec validate --all --strict` passes and that the README renders correctly on GitHub
+- [ ] 1.5 In `RoundedRingShape.path(in:)`, add the inner rounded rect mirrored onto itself so that it winds opposite to the outer one, keeping the ring's middle empty under both the non-zero and the even-odd fill rule (design Decision 7); verify that the downloaded build shows a ring with a transparent middle, not a filled rectangle
 
 ## 2. Build and release workflow
 

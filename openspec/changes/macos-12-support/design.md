@@ -106,6 +106,17 @@ Adding Developer ID later means these steps, all in the `build` job before packa
 3. Run `notarytool submit --wait`.
 4. Staple the notarization ticket.
 
+### 7. Make the ring's cut-out independent of the fill rule
+
+The ring's path is the outer rounded rect plus the inner one, both drawn in the same direction. It relied on the even-odd fill rule, applied through a `fill` wrapper on `RoundedRingShape`, to leave the middle empty. In the first test of the downloaded build, the ring rendered as a filled rectangle, so the even-odd rule was not in effect there.
+
+The inner rect is now mirrored onto itself with `CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: 2 × midX, ty: 0)`. It covers the same area but winds the opposite way, so the middle stays empty under both the non-zero and the even-odd rule. The ring's geometry and look do not change.
+
+Alternatives considered:
+
+- **Find out why the even-odd rule was lost and fix only that.** The cause could be the overload the `fill` wrapper resolves to at the lower deployment target, or the older SwiftUI runtime. Either way, the shape would still break whenever the rule is lost. Rejected.
+- **Stroke a rounded rect instead of filling a path.** The inner corner radius would then follow from the stroke instead of the current `max(radius - 0.6 × thickness, 20)`, which changes the look. Rejected.
+
 ### Private API
 
 This change adds no private API. The existing `DisplayServices` brightness calls keep their fallback: if the framework or one of its functions is missing on a Mac, brightness control silently does nothing and the slider still adjusts the ring, as the display-brightness spec requires.

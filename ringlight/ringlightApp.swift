@@ -483,7 +483,10 @@ struct RoundedRingShape: Shape {
             height: rect.height - (margin + thickness) * 2 - menuBarHeight
         )
         let innerCornerRadius = max(cornerRadius - thickness * 0.6, 20)
-        path.addRoundedRect(in: innerRect, cornerSize: CGSize(width: innerCornerRadius, height: innerCornerRadius))
+        // Mirror the inner rect onto itself so it winds opposite to the outer one: the center
+        // then stays empty under the non-zero fill rule too, not only when eoFill is applied
+        let mirror = CGAffineTransform(a: -1, b: 0, c: 0, d: 1, tx: innerRect.midX * 2, ty: 0)
+        path.addRoundedRect(in: innerRect, cornerSize: CGSize(width: innerCornerRadius, height: innerCornerRadius), transform: mirror)
         return path
     }
 }
