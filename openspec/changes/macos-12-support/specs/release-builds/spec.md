@@ -7,12 +7,17 @@ Publishes ready-to-run RingLight downloads on GitHub so that people can install 
 ## ADDED Requirements
 
 ### Requirement: Tagged versions publish a download
-Pushing a version tag of the form `vMAJOR.MINOR.PATCH` SHALL build RingLight in its Release configuration and publish a GitHub Release for that tag, with the zipped `ringlight.app` and its SHA-256 checksum attached. The app's version SHALL match the tag without its leading "v".
+Pushing a version tag of the form `vMAJOR.MINOR.PATCH` SHALL build RingLight in its Release configuration and publish a GitHub Release for that tag, with the zipped `ringlight.app` and its SHA-256 checksum attached. If a release for the tag already exists, for example because it was published in GitHub's web UI, the two files SHALL be attached to that release. The app's version SHALL match the tag without its leading "v".
 
 #### Scenario: Push a version tag
 - **WHEN** a maintainer pushes the tag `v1.1.0`
 - **THEN** a GitHub Release named `v1.1.0` is published with the zipped app and its checksum
 - **AND** the downloaded app shows version 1.1.0 in Finder's Get Info
+
+#### Scenario: Release published in GitHub's web UI
+- **WHEN** a maintainer publishes a release for a new tag `v1.1.0` in GitHub's web UI
+- **THEN** the zipped app and its checksum are attached to that release
+- **AND** the release keeps the title and notes the maintainer wrote
 
 #### Scenario: Tag that is not a version
 - **WHEN** a maintainer pushes a tag that does not match `vMAJOR.MINOR.PATCH`

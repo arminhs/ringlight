@@ -107,13 +107,19 @@ jobs:
           name: ringlight
           path: dist
 
-      - name: Create release
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
         run: |
-          gh release create "$TAG" dist/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "$TAG" \
-            --generate-notes \
-            --notes "Download \`ringlight-${TAG#v}.zip\`, unzip it and move ringlight.app to Applications. This build is not notarized: see [Download](https://github.com/$GITHUB_REPOSITORY#download) in the README for how to open it the first time."
+          # Publishing a release in GitHub's web UI creates its tag, which also starts this workflow.
+          # Attach the files to that release instead of trying to create a second one.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG" \
+              --generate-notes \
+              --notes "Download \`ringlight-${TAG#v}.zip\`, unzip it and move ringlight.app to Applications. This build is not notarized: see [Download](https://github.com/$GITHUB_REPOSITORY#download) in the README for how to open it the first time."
+          fi

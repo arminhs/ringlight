@@ -78,7 +78,7 @@ The **build** job runs on every trigger. It uses `runs-on: macos-26`, pins Xcode
   - on tag builds, `CFBundleShortVersionString` equals the tag's version
 - **Package:** zip the app with `ditto -c -k --keepParent` into `ringlight-<version>.zip`, write a `shasum -a 256` file next to it, and upload both with `actions/upload-artifact` using a short retention period.
 
-The **release** job runs for tags only. It `needs: build`, uses `runs-on: ubuntu-latest` and has `permissions: contents: write`. It downloads the artifact and runs `gh release create <tag> <zip> <sha256> --generate-notes`, adding a one-line install note that links to the README.
+The **release** job runs for tags only. It `needs: build`, uses `runs-on: ubuntu-latest` and has `permissions: contents: write`. It downloads the artifact and runs `gh release create <tag> <zip> <sha256> --generate-notes`, adding a one-line install note that links to the README. If a release for the tag already exists, the job attaches the two files to it with `gh release upload --clobber` instead, and leaves its title and notes alone. This happens when a maintainer publishes the release in GitHub's web UI: publishing creates the tag, and the tag starts the workflow.
 
 Why these choices:
 
