@@ -325,11 +325,19 @@ struct ControlSlider: View {
 
 struct TemperatureSlider: View {
     @Binding var value: CGFloat
-    
+
+    // "thermometer.medium" was added in macOS 13; macOS 12 has the same glyph named "thermometer"
+    private var thermometerSymbol: String {
+        if #available(macOS 13, *) {
+            return "thermometer.medium"
+        }
+        return "thermometer"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Image(systemName: "thermometer.medium")
+                Image(systemName: thermometerSymbol)
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .frame(width: 18)
@@ -392,26 +400,24 @@ struct RingLightOverlay: View {
             if appDelegate.isActive {
                 ZStack {
                     ForEach(0..<3) { layer in
-                        RoundedRingShape(
+                        RingLayer(
                             thickness: appDelegate.ringThickness + CGFloat(layer) * 12,
                             cornerRadius: appDelegate.cornerRadius,
                             margin: appDelegate.margin,
-                            menuBarHeight: getMenuBarHeight()
-                        )
-                        .fill(
-                            Color(nsColor: appDelegate.ringColor)
+                            menuBarHeight: getMenuBarHeight(),
+                            color: Color(nsColor: appDelegate.ringColor)
                                 .opacity(appDelegate.brightness * appDelegate.glowIntensity / Double(layer + 2))
                         )
                         .blur(radius: CGFloat(layer + 1) * 8)
                     }
                     
-                    RoundedRingShape(
+                    RingLayer(
                         thickness: appDelegate.ringThickness,
                         cornerRadius: appDelegate.cornerRadius,
                         margin: appDelegate.margin,
-                        menuBarHeight: getMenuBarHeight()
+                        menuBarHeight: getMenuBarHeight(),
+                        color: Color(nsColor: appDelegate.ringColor).opacity(appDelegate.brightness)
                     )
-                    .fill(Color(nsColor: appDelegate.ringColor).opacity(appDelegate.brightness))
                 }
                 .mask(
                     Group {
@@ -452,37 +458,35 @@ struct RingLightOverlay: View {
     }
 }
 
-struct RoundedRingShape: Shape {
-    var thickness: CGFloat
-    var cornerRadius: CGFloat
-    var margin: CGFloat
-    var menuBarHeight: CGFloat
+// One ring: the outer rounded rect with the inner one cut out by compositing, the same way the
+// mouse hole is cut. A single path with the inner rect as a hole renders filled on macOS 12.
+struct RingLayer: View {
+    let thickness: CGFloat
+    let cornerRadius: CGFloat
+    let margin: CGFloat
+    let menuBarHeight: CGFloat
+    let color: Color
     
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let outerRect = CGRect(
-            x: rect.minX + margin,
-            y: rect.minY + margin + menuBarHeight,
-            width: rect.width - margin * 2,
-            height: rect.height - margin * 2 - menuBarHeight
-        )
-        path.addRoundedRect(in: outerRect, cornerSize: CGSize(width: cornerRadius, height: cornerRadius))
-        
-        let innerRect = CGRect(
-            x: rect.minX + margin + thickness,
-            y: rect.minY + margin + thickness + menuBarHeight,
-            width: rect.width - (margin + thickness) * 2,
-            height: rect.height - (margin + thickness) * 2 - menuBarHeight
-        )
-        let innerCornerRadius = max(cornerRadius - thickness * 0.6, 20)
-        path.addRoundedRect(in: innerRect, cornerSize: CGSize(width: innerCornerRadius, height: innerCornerRadius))
-        return path
-    }
-}
-
-extension RoundedRingShape {
-    func fill(_ content: some ShapeStyle) -> some View {
-        self.fill(content, style: FillStyle(eoFill: true))
+    var body: some View {
+        Canvas { context, size in
+            let outerRect = CGRect(
+                x: margin,
+                y: margin + menuBarHeight,
+                width: size.width - margin * 2,
+                height: size.height - margin * 2 - menuBarHeight
+            )
+            context.fill(Path(roundedRect: outerRect, cornerRadius: cornerRadius), with: .color(color))
+            
+            let innerRect = CGRect(
+                x: margin + thickness,
+                y: margin + thickness + menuBarHeight,
+                width: size.width - (margin + thickness) * 2,
+                height: size.height - (margin + thickness) * 2 - menuBarHeight
+            )
+            let innerCornerRadius = max(cornerRadius - thickness * 0.6, 20)
+            context.blendMode = .destinationOut
+            context.fill(Path(roundedRect: innerRect, cornerRadius: innerCornerRadius), with: .color(.white))
+        }
     }
 }
 

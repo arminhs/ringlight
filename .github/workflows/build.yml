@@ -1,0 +1,125 @@
+# Builds a universal, ad-hoc-signed ringlight.app and checks that it runs on
+# macOS 12 and later. Pushing a vX.Y.Z tag also publishes it to GitHub Releases.
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    tags: ['v[0-9]+.[0-9]+.[0-9]+']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    name: Build universal app
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      APP: build/Release/ringlight.app
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Read version from tag
+        if: github.event_name == 'push' && github.ref_type == 'tag'
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: |
+          settings=(
+            SYMROOT="$PWD/build"
+            CODE_SIGN_IDENTITY=-
+            CODE_SIGN_STYLE=Manual
+            DEVELOPMENT_TEAM=
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+          )
+          if [[ -n "${VERSION:-}" ]]; then
+            settings+=(MARKETING_VERSION="$VERSION")
+          fi
+          xcodebuild -project ringlight.xcodeproj -target ringlight -configuration Release "${settings[@]}" build
+
+      - name: Verify build
+        run: |
+          set -u
+          fail() { echo "::error::$1"; exit 1; }
+          bin="$APP/Contents/MacOS/ringlight"
+          plist="$APP/Contents/Info.plist"
+
+          archs="$(lipo -archs "$bin")"
+          echo "Architectures: $archs"
+          for arch in arm64 x86_64; do
+            [[ " $archs " == *" $arch "* ]] || fail "Missing $arch code (found: $archs)"
+            minos="$(vtool -arch "$arch" -show-build "$bin" | awk '$1 == "minos" { print $2 }')"
+            echo "$arch minimum macOS: $minos"
+            [[ "$minos" == "12.0" ]] || fail "$arch code requires macOS ${minos:-unknown}, expected 12.0"
+          done
+
+          min_system="$(/usr/libexec/PlistBuddy -c 'Print :LSMinimumSystemVersion' "$plist")"
+          echo "LSMinimumSystemVersion: $min_system"
+          [[ "$min_system" == "12.0" ]] || fail "LSMinimumSystemVersion is $min_system, expected 12.0"
+
+          codesign --verify --deep --strict --verbose=2 "$APP" || fail "The code signature is not valid"
+
+          if [[ -n "${VERSION:-}" ]]; then
+            app_version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$plist")"
+            echo "CFBundleShortVersionString: $app_version"
+            [[ "$app_version" == "$VERSION" ]] || fail "The app's version is $app_version, expected $VERSION"
+          fi
+
+      - name: Package
+        run: |
+          zip="ringlight-${VERSION:-dev-${GITHUB_SHA::7}}.zip"
+          mkdir -p dist
+          ditto -c -k --keepParent "$APP" "dist/$zip"
+          (cd dist && shasum -a 256 "$zip" > "$zip.sha256")
+          cat "dist/$zip.sha256"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ringlight
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: ringlight
+          path: dist
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          # Publishing a release in GitHub's web UI creates its tag, which also starts this workflow.
+          # Attach the files to that release instead of trying to create a second one.
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" dist/* \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$TAG" \
+              --generate-notes \
+              --notes "Download \`ringlight-${TAG#v}.zip\`, unzip it and move ringlight.app to Applications. This build is not notarized: see [Download](https://github.com/$GITHUB_REPOSITORY#download) in the README for how to open it the first time."
+          fi

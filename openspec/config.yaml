@@ -1,0 +1,64 @@
+schema: spec-driven
+
+# Project context, shown to AI when creating artifacts.
+context: |
+  RingLight is a macOS menu bar utility that turns the edges of the screen into
+  a soft "ring light" for video calls. It brings the idea of macOS Tahoe's Edge
+  Light to Macs that cannot run it (Intel Macs, older macOS versions).
+
+  Tech stack:
+  - Swift 5, SwiftUI + AppKit; AVFoundation for the camera preview
+  - Xcode project ringlight.xcodeproj, single app target (bundle id om.ringlight)
+  - Deployment target macOS 12.0 (the unit-test target stays on 14.6 for Swift
+    Testing); no third-party dependencies or package manager
+  - Guard APIs newer than macOS 12 with #available, and check SF Symbol
+    availability by hand: the compiler does not check symbol names
+  - App Sandbox disabled; camera entitlement plus NSCameraUsageDescription
+  - Display brightness uses the private DisplayServices framework, loaded at
+    runtime with dlopen/dlsym; it must stay a silent no-op when unavailable
+
+  Architecture:
+  - Almost all code is in ringlight/ringlightApp.swift. AppDelegate is an
+    ObservableObject holding all state as @Published properties; it owns the
+    overlay window, the NSStatusItem + NSPopover, event monitors and the
+    camera session. ContentView.swift is an unused template file.
+  - SwiftUI views (RingLightOverlay, MenuBarControlView, ControlSlider,
+    TemperatureSlider) observe AppDelegate directly.
+  - Accessory app (no Dock icon). The ring is a borderless, transparent,
+    click-through, floating window covering the main screen.
+  - Settings live in memory only; nothing is persisted between launches.
+
+  Testing and build:
+  - ringlightTests (Swift Testing) and ringlightUITests (XCTest) contain only
+    template placeholders; behavior is verified manually in the running app.
+  - Building needs macOS with Xcode (xcodebuild); it cannot build on Linux.
+  - .github/workflows/build.yml builds a universal, ad-hoc-signed app on
+    macos-26 (Xcode 26.6) for pull requests and main, checks arm64 + x86_64
+    and a macOS 12.0 minimum, and publishes vX.Y.Z tags to GitHub Releases.
+    Release builds are not notarized.
+
+  Conventions:
+  - Commit messages mostly follow Conventional Commits (feat:, fix:, style:).
+  - README.md documents features, keyboard shortcuts and the roadmap.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Under Impact, call out new macOS permission prompts (camera, accessibility, screen recording) and any entitlement or Info.plist change
+  design:
+    - Flag any private or undocumented macOS API and describe the fallback when it is unavailable
+  tasks:
+    - Include manual verification steps in the running app, since automated test coverage is minimal
+    - Update README.md (Features, Shortcuts, Roadmap) when user-visible behavior changes
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing
